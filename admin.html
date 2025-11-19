@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Lấy số thứ tự — Quản trị</title>
+  <link rel="stylesheet" href="assets/css/styles.css">
+</head>
+<body>
+  <div class="container">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <h1 style="margin:0">Lấy số thứ tự — Bảng quản trị</h1>
+      <div style="display:flex;gap:8px">
+        <button id="exportBtn" class="btn-ghost">Xuất JSON</button>
+        <button id="importBtn" class="btn-ghost">Nhập JSON</button>
+        <button id="resetBtn" class="btn-danger">Reset dữ liệu</button>
+        <input type="file" id="importFile" style="display:none" />
+      </div>
+    </div>
+
+    <div class="grid" style="display:grid;grid-template-columns:360px 1fr;gap:12px">
+      <aside class="card">
+        <label for="filterService">Chọn dịch vụ</label>
+        <select id="filterService"></select>
+        <div style="margin-top:8px;display:flex;gap:8px">
+          <button id="callNext">Gọi tiếp</button>
+          <button id="holdBtn" class="btn-ghost">Hoãn</button>
+        </div>
+
+        <div style="margin-top:12px" class="muted">Đang phục vụ</div>
+        <div style="margin-top:8px"><div id="servingInfo">—</div></div>
+
+        <hr style="margin:12px 0;border:none;border-top:1px dashed #eef2f7" />
+        <div class="muted">Thống kê</div>
+        <div style="margin-top:8px" id="stats">—</div>
+      </aside>
+
+      <main class="card">
+        <h2 style="margin:0 0 8px 0">Danh sách vé</h2>
+        <div class="muted">Lọc theo dịch vụ, quản lý trạng thái vé (Gọi/Hoãn/Hoàn thành/Hủy).</div>
+        <div class="list" id="ticketsList"></div>
+      </main>
+    </div>
+  </div>
+
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/admin.js"></script>
+</body>
+</html>
