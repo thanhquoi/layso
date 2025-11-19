@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Lấy số thứ tự — Khách hàng</title>
+  <style>
+    :root{--bg:#f6f8fb;--card:#fff;--primary:#0b5ed7;--muted:#6b7280}
+    *{box-sizing:border-box}
+    body{font-family:Inter,system-ui,Arial,sans-serif;background:var(--bg);margin:0;color:#111}
+    .wrap{max-width:760px;margin:18px auto;padding:16px}
+    .card{background:var(--card);padding:14px;border-radius:12px;box-shadow:0 6px 18px rgba(15,23,42,0.06)}
+    h1{font-size:18px;margin:0 0 12px}
+    label{display:block;font-size:13px;margin-bottom:6px;color:var(--muted)}
+    select,input,button{width:100%;padding:10px;border-radius:8px;border:1px solid #e6e9ef;font-size:14px}
+    button{cursor:pointer;border:none;background:var(--primary);color:#fff;padding:10px;border-radius:8px}
+    .ticket{font-weight:700;font-size:22px;color:var(--primary);display:inline-block;padding:6px 10px;border-radius:8px;background:#f0f6ff}
+    .muted{color:var(--muted);font-size:13px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>Lấy số thứ tự (Khách hàng)</h1>
+      <div class="muted">Chọn lĩnh vực / dịch vụ, nhập tên (tùy chọn), nhận mã số. Dữ liệu lưu trên trình duyệt (localStorage).</div>
+
+      <div style="margin-top:12px">
+        <label for="groupSelect">Lĩnh vực</label>
+        <select id="groupSelect"></select>
+      </div>
+      <div style="margin-top:12px">
+        <label for="serviceSelect">Dịch vụ</label>
+        <select id="serviceSelect"></select>
+      </div>
+      <div style="margin-top:12px">
+        <label for="nameInput">Tên (tùy chọn)</label>
+        <input id="nameInput" placeholder="Nguyễn Văn A" />
+      </div>
+      <div style="margin-top:12px;display:flex;gap:8px">
+        <button id="takeBtn">Lấy số</button>
+        <button id="copyBtn" style="background:#fff;color:var(--primary);border:1px solid rgba(11,94,215,0.12)">Sao chép mã</button>
+      </div>
+
+      <div id="lastTicketWrap" style="margin-top:14px;display:none">
+        <div class="muted">Mã số của bạn</div>
+        <div style="margin-top:8px"><span class="ticket" id="lastTicket"></span></div>
+        <div class="muted" id="lastQueueInfo"></div>
+      </div>
+
+      <div style="margin-top:16px" class="muted">Lưu ý: admin mở trang quản trị (admin.html) để gọi, hoãn, hoàn thành các vé.</div>
+    </div>
+  </div>
+
+  <script>
+    // Dữ liệu cấu hình (có thể sửa trực tiếp trong file)
+    const SERVICE_GROUPS = [
+      { id: 'thuphi', name: 'Thu phí & Đăng ký kinh doanh', services: [ { code: 'TF', name: 'Thu phí - Thanh toán' }, { code: 'DKKD', name: 'Đăng ký kinh doanh' } ]},
+      { id: 'tuphap', name: 'Tư pháp - Văn phòng - Thanh tra', services: [ { code: 'TP', name: 'Tư pháp' }, { code: 'VT', name: 'Văn phòng' } ]},
+      { id: 'vanhoa', name: 'Văn hóa TT & DL - KHCN', services: [ { code: 'VH', name: 'Văn hóa' }, { code: 'KHCN', name: 'Khoa học & Công nghệ' } ]},
+      { id: 'noivu', name: 'Nội vụ - Y tế - Giáo dục', services: [ { code: 'NV', name: 'Nội vụ' }, { code: 'YT', name: 'Y tế' }, { code: 'GD', name: 'Giáo dục' } ]},
+      { id: 'nongnghiep', name: 'Nông nghiệp - Môi trường', services: [ { code: 'NN', name: 'Nông nghiệp' }, { code: 'MT', name: 'Môi trường' } ]},
+      { id: 'datdai', name: 'Đất đai - Xây dựng', services: [ { code: 'DD', name: 'Đất đai' }, { code: 'XD', name: 'Xây dựng' } ]},
+      { id: 'other', name: 'Quân sự - Căn cước - Phương tiện', services: [ { code: 'QS', name: 'Quân sự' }, { code: 'CC', name: 'Căn cước' }, { code: 'PT', name: 'Đăng ký phương tiện' } ]}
+    ];
+
+    const STORAGE_KEY = 'local_ticket_app_v1';
+    let state = { tickets: [], sequence: {} };
+
+    function saveState(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+    function loadState(){ const s = localStorage.getItem(STORAGE_KEY); if(s){ try{ state = JSON.parse(s); }catch(e){ console.error(e); } } else { SERVICE_GROUPS.flatMap(g=>g.services).forEach(svc=> state.sequence[svc.code]=0); } }
+    function uid(){ return Math.random().toString(36).slice(2,9).toUpperCase(); }
+    function formatTicketCode(code,num){ return `${code}-${String(num).padStart(3,'0')}`; }
+
+    // UI refs
+    const groupSelect = document.getElementById('groupSelect');
+    const serviceSelect = document.getElementById('serviceSelect');
+    const nameInput = document.getElementById('nameInput');
+    const takeBtn = document.getElementById('takeBtn');
+    const lastTicketWrap = document.getElementById('lastTicketWrap');
+    const lastTicketEl = document.getElementById('lastTicket');
+    const lastQueueInfo = document.getElementById('lastQueueInfo');
+    const copyBtn = document.getElementById('copyBtn');
+
+    function populateGroupSelect(){ groupSelect.innerHTML=''; SERVICE_GROUPS.forEach(g=>{ const opt=document.createElement('option'); opt.value=g.id; opt.textContent=g.name; groupSelect.appendChild(opt); }); onGroupChange(); }
+    function onGroupChange(){ const gid = groupSelect.value; const group = SERVICE_GROUPS.find(g=>g.id===gid); serviceSelect.innerHTML=''; group.services.forEach(s=>{ const opt=document.createElement('option'); opt.value=s.code; opt.textContent=`${s.code} — ${s.name}`; serviceSelect.appendChild(opt); }); }
+
+    function createTicket(serviceCode, name=''){ state.sequence[serviceCode] = (state.sequence[serviceCode]||0) + 1; const num = state.sequence[serviceCode]; const code = formatTicketCode(serviceCode,num); const t = { id: uid(), code, service: serviceCode, name, status:'waiting', createdAt: Date.now() }; state.tickets.push(t); saveState(); return t; }
+
+    takeBtn.addEventListener('click', ()=>{ const svc = serviceSelect.value; const name = nameInput.value.trim(); const ticket = createTicket(svc,name); lastTicketWrap.style.display='block'; lastTicketEl.textContent=ticket.code; const waiting = state.tickets.filter(x=>x.service===svc && x.status==='waiting'); lastQueueInfo.textContent = `Có ${waiting.length} vé chờ trước.`; try{ navigator.clipboard.writeText(ticket.code); }catch(e){} });
+    copyBtn.addEventListener('click', ()=>{ const txt = lastTicketEl.textContent; if(!txt){ alert('Chưa có mã'); return; } navigator.clipboard.writeText(txt).then(()=>alert('Đã sao chép mã')).catch(()=>alert('Không thể sao chép')); });
+
+    groupSelect.addEventListener('change', onGroupChange);
+    loadState(); populateGroupSelect();
+  </script>
+</body>
+</html>
